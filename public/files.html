@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wi-Fi Web Transfer - ダウンロード</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --bg: #0F172A;
+      --surface: #1E293B;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; padding: 2rem 0;
+    }
+    .container {
+      background: var(--surface);
+      padding: 2.5rem;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      width: 90%; max-width: 600px;
+    }
+    h1 {
+      margin-top: 0; font-weight: 800; font-size: 1.8rem;
+      background: linear-gradient(135deg, #38BDF8, #818CF8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .meta { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
+    
+    .btn-zip {
+      display: block; width: 100%; text-align: center;
+      background: linear-gradient(135deg, #4F46E5, #6366F1); color: white;
+      text-decoration: none; padding: 1rem; border-radius: 12px;
+      font-weight: 600; font-size: 1.1rem; margin-bottom: 2rem;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3); transition: transform 0.2s;
+    }
+    .btn-zip:hover { transform: translateY(-2px); opacity: 0.9; }
+
+    .file-list { list-style: none; padding: 0; margin: 0; }
+    .file-item {
+      background: rgba(255,255,255,0.05); padding: 1rem 1.5rem;
+      border-radius: 12px; margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .file-name { font-weight: 600; word-break: break-all; }
+    .file-size { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+    
+    .btn-download {
+      background: rgba(255,255,255,0.1); color: #60A5FA;
+      text-decoration: none; padding: 0.5rem 1rem;
+      border-radius: 8px; font-weight: 600; font-size: 0.9rem;
+      white-space: nowrap; margin-left: 1rem; transition: background 0.2s;
+    }
+    .btn-download:hover { background: rgba(255,255,255,0.2); }
+
+    #errorMsg { color: #F87171; text-align: center; font-weight: 600; display: none; }
+    #loading { text-align: center; color: var(--text-muted); }
+    .content-area { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div id="loading">情報を取得中...</div>
+    <div id="errorMsg"></div>
+
+    <div class="content-area" id="contentArea">
+      <h1>共有されたファイル</h1>
+      <div class="meta" id="metaInfo"></div>
+      
+      <a href="#" id="zipBtn" class="btn-zip">すべてダウンロード (ZIP)</a>
+
+      <ul class="file-list" id="fileList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const sessionId = window.location.pathname.split('/').pop();
+
+    async function fetchMetadata() {
+      try {
+        const res = await fetch(`/api/files/\${sessionId}`);
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || '情報の取得に失敗しました');
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        const contentArea = document.getElementById('contentArea');
+        contentArea.style.display = 'block';
+
+        const expireDate = new Date(data.expiresAt).toLocaleString();
+        document.getElementById('metaInfo').innerText = `ファイルの数: \${data.files.length} 個 | 有効期限: \${expireDate}`;
+
+        document.getElementById('zipBtn').href = `/api/download/\${sessionId}/zip/all`;
+        if (data.files.length === 1) {
+           document.getElementById('zipBtn').style.display = 'none'; // 1個の時はZIPボタンを隠す
+        }
+
+        const list = document.getElementById('fileList');
+        data.files.forEach(f => {
+          const li = document.createElement('li');
+          li.className = 'file-item';
+          const sizeKb = (f.size / 1024).toFixed(1);
+          li.innerHTML = `
+            <div>
+              <div class="file-name">\${f.name}</div>
+              <div class="file-size">\${sizeKb} KB</div>
+            </div>
+            <a href="/api/download/\${sessionId}/\${f.index}" class="btn-download">保存</a>
+          `;
+          list.appendChild(li);
+        });
+
+      } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        const errEl = document.getElementById('errorMsg');
+        errEl.style.display = 'block';
+        errEl.innerText = err.message;
+      }
+    }
+
+    fetchMetadata();
+  </script>
+</body>
+</html>

@@ -174,7 +174,7 @@
     fileInput.addEventListener('change', () => {
       if (fileInput.files.length > 0) {
         const count = fileInput.files.length;
-        fileMsg.innerHTML = `<span style="color:#60A5FA">\${count}</span> 個のファイルが選択されています`;
+        fileMsg.innerHTML = `<span style="color:#60A5FA">${count}</span> 個のファイルが選択されています`;
         dropArea.style.borderColor = '#60A5FA';
       } else {
         fileMsg.innerHTML = 'ここをタップしてファイルを選択<br>（またはドラッグ&ドロップ）';

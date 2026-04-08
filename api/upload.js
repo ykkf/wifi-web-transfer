@@ -1,42 +1,44 @@
 const express = require('express');
-const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const memoryStore = require('./memoryStore');
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
-router.post('/', upload.array('files'), (req, res) => {
+router.post('/', (req, res) => {
   try {
-    const files = req.files;
-    if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'No files uploaded.' });
+    var body = req.body;
+
+    if (!body || !body.files || body.files.length === 0) {
+      return res.status(400).json({ error: 'No files received.' });
     }
 
-    const { expireMinutes } = req.body;
-    const minutes = parseInt(expireMinutes) || 60;
-    const expiresAt = Date.now() + minutes * 60 * 1000;
+    var minutes = parseInt(body.expireMinutes) || 60;
+    var expiresAt = Date.now() + minutes * 60 * 1000;
+    var sessionId = uuidv4();
 
-    const sessionId = uuidv4();
-    memoryStore.sessions.set(sessionId, {
-      expiresAt,
-      files: files.map(f => ({
-        originalname: f.originalname,
-        buffer: f.buffer,
-        mimetype: f.mimetype,
+    var storedFiles = body.files.map(function(f) {
+      return {
+        originalname: f.name,
+        buffer: Buffer.from(f.data, 'base64'),
+        mimetype: f.type,
         size: f.size
-      }))
+      };
+    });
+
+    memoryStore.sessions.set(sessionId, {
+      expiresAt: expiresAt,
+      files: storedFiles
     });
 
     // Generate URL to share
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers.host;
-    const shareUrl = protocol + '://' + host + '/files/' + sessionId;
+    var protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    var host = req.headers.host;
+    var shareUrl = protocol + '://' + host + '/files/' + sessionId;
 
-    res.json({ success: true, sessionId, shareUrl, expiresAt });
+    res.json({ success: true, sessionId: sessionId, shareUrl: shareUrl, expiresAt: expiresAt });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Upload failed.' });
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Upload failed: ' + err.message });
   }
 });
 

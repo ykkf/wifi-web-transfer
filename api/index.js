@@ -7,7 +7,9 @@ const downloadRoute = require('./download');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+
+// Accept large JSON bodies (base64 files can be big)
+app.use(express.json({ limit: '100mb' }));
 
 // Main routing
 app.use('/api/upload', uploadRoute);

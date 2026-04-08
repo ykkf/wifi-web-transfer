@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wi-Fi Web Transfer - 送信</title>
+  <title>Web Transfer</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <style>
@@ -34,7 +34,6 @@
       width: 90%;
       max-width: 500px;
       text-align: center;
-      transition: all 0.3s ease;
     }
     h1 {
       font-size: 2rem;
@@ -44,8 +43,8 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    p { color: var(--text-muted); margin-bottom: 2rem; }
-    
+    .subtitle { color: var(--text-muted); margin-bottom: 2rem; }
+
     .file-drop-area {
       position: relative;
       background: rgba(255, 255, 255, 0.05);
@@ -56,7 +55,7 @@
       transition: all 0.3s ease;
       margin-bottom: 2rem;
     }
-    .file-drop-area:hover, .file-drop-area.dragover {
+    .file-drop-area:hover {
       background: rgba(255, 255, 255, 0.1);
       border-color: var(--primary);
     }
@@ -65,7 +64,7 @@
       opacity: 0; cursor: pointer;
     }
     .file-msg { font-weight: 600; font-size: 1.1rem; pointer-events: none; }
-    
+
     select {
       width: 100%;
       padding: 1rem;
@@ -76,6 +75,7 @@
       font-size: 1rem;
       margin-bottom: 2rem;
       outline: none;
+      box-sizing: border-box;
     }
 
     button {
@@ -95,10 +95,9 @@
     button:active { transform: translateY(0); }
     button:disabled { background: #334155; transform: none; cursor: not-allowed; box-shadow: none; }
 
-    /* Results section */
     #resultArea { display: none; margin-top: 2rem; animation: fadeIn 0.5s; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    
+
     #qrcode {
       background: white;
       padding: 15px;
@@ -116,124 +115,187 @@
       font-weight: 600;
       border: 1px solid rgba(255,255,255,0.1);
     }
-    .spinner {
+
+    .progress-area {
       display: none;
-      width: 40px; height: 40px;
-      border: 4px solid rgba(255,255,255,0.1);
-      border-radius: 50%;
-      border-top-color: var(--primary);
-      animation: spin 1s ease-in-out infinite;
-      margin: 0 auto 1rem auto;
+      margin-bottom: 1rem;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    
+    .progress-bar-bg {
+      width: 100%;
+      height: 12px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4F46E5, #818CF8);
+      border-radius: 6px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .progress-text {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    .error-text {
+      color: #F87171;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
 
-  <div class="container" id="mainContainer">
+  <div class="container">
     <h1>Web Transfer</h1>
-    <p>ブラウザだけでファイルを素早く共有</p>
+    <p class="subtitle">Pick files and share instantly</p>
 
-    <form id="uploadForm">
+    <div id="uploadArea">
       <div class="file-drop-area" id="dropArea">
-        <div class="file-msg" id="fileMsg">ここをタップしてファイルを選択<br>（またはドラッグ&ドロップ）</div>
-        <input type="file" id="fileInput" name="files" multiple required>
+        <div class="file-msg" id="fileMsg">Tap to select files</div>
+        <input type="file" id="fileInput" multiple>
       </div>
 
-      <select name="expireMinutes" id="expireSelect">
-        <option value="10">有効期限: 10分</option>
-        <option value="60" selected>有効期限: 60分</option>
-        <option value="1440">有効期限: 24時間</option>
+      <select id="expireSelect">
+        <option value="10">Expires in: 10 min</option>
+        <option value="60" selected>Expires in: 60 min</option>
+        <option value="1440">Expires in: 24 hours</option>
       </select>
 
-      <div class="spinner" id="spinner"></div>
-      <button type="submit" id="submitBtn">ファイルを送信</button>
-    </form>
+      <div class="progress-area" id="progressArea">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Preparing...</div>
+      </div>
+
+      <button id="submitBtn" disabled>Send Files</button>
+      <div class="error-text" id="errorText" style="display:none;"></div>
+    </div>
 
     <div id="resultArea">
-      <p style="color: #4ADE80; font-weight: bold;">アップロード完了！</p>
+      <p style="color: #4ADE80; font-weight: bold; font-size: 1.2rem;">Upload Complete!</p>
       <div id="qrcode"></div>
-      <p>このURLを共有するか、QRコードをスキャンしてください：</p>
+      <p>Share this URL or scan QR code:</p>
       <div class="url-box" id="shareUrl"></div>
-      
-      <button style="margin-top: 1.5rem; background: #334155; color: white;" onclick="location.reload()">別のファイルを送る</button>
+      <button style="margin-top: 1.5rem; background: #334155;" onclick="location.reload()">Send more files</button>
     </div>
   </div>
 
   <script>
-    const fileInput = document.getElementById('fileInput');
-    const fileMsg = document.getElementById('fileMsg');
-    const dropArea = document.getElementById('dropArea');
-    const form = document.getElementById('uploadForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const spinner = document.getElementById('spinner');
-    const resultArea = document.getElementById('resultArea');
-    const shareUrlDiv = document.getElementById('shareUrl');
+    var fileInput = document.getElementById('fileInput');
+    var fileMsg = document.getElementById('fileMsg');
+    var submitBtn = document.getElementById('submitBtn');
+    var progressArea = document.getElementById('progressArea');
+    var progressFill = document.getElementById('progressFill');
+    var progressText = document.getElementById('progressText');
+    var errorText = document.getElementById('errorText');
+    var uploadArea = document.getElementById('uploadArea');
+    var resultArea = document.getElementById('resultArea');
 
-    fileInput.addEventListener('change', () => {
+    fileInput.addEventListener('change', function() {
       if (fileInput.files.length > 0) {
-        const count = fileInput.files.length;
-        fileMsg.innerHTML = `<span style="color:#60A5FA">${count}</span> 個のファイルが選択されています`;
-        dropArea.style.borderColor = '#60A5FA';
+        fileMsg.textContent = fileInput.files.length + ' file(s) selected';
+        document.getElementById('dropArea').style.borderColor = '#60A5FA';
+        submitBtn.disabled = false;
       } else {
-        fileMsg.innerHTML = 'ここをタップしてファイルを選択<br>（またはドラッグ&ドロップ）';
-        dropArea.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+        fileMsg.textContent = 'Tap to select files';
+        document.getElementById('dropArea').style.borderColor = 'rgba(255,255,255,0.2)';
+        submitBtn.disabled = true;
       }
     });
 
-    ['dragenter', 'dragover'].forEach(evt => dropArea.addEventListener(evt, (e) => {
-      e.preventDefault(); dropArea.classList.add('dragover');
-    }));
-    ['dragleave', 'drop'].forEach(evt => dropArea.addEventListener(evt, (e) => {
-      e.preventDefault(); dropArea.classList.remove('dragover');
-    }));
+    function readFileAsBase64(file) {
+      return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() {
+          // result is "data:mime;base64,XXXX" - extract just the base64 part
+          var base64 = reader.result.split(',')[1];
+          resolve({
+            name: file.name,
+            type: file.type || 'application/octet-stream',
+            size: file.size,
+            data: base64
+          });
+        };
+        reader.onerror = function() { reject(reader.error); };
+        reader.readAsDataURL(file);
+      });
+    }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if(fileInput.files.length === 0) return;
+    submitBtn.addEventListener('click', async function() {
+      if (fileInput.files.length === 0) return;
 
-      submitBtn.style.display = 'none';
-      spinner.style.display = 'block';
-
-      const formData = new FormData();
-      for(let i = 0; i < fileInput.files.length; i++) {
-        formData.append('files', fileInput.files[i]);
-      }
-      formData.append('expireMinutes', document.getElementById('expireSelect').value);
+      submitBtn.disabled = true;
+      errorText.style.display = 'none';
+      progressArea.style.display = 'block';
+      progressText.textContent = 'Reading files...';
+      progressFill.style.width = '10%';
 
       try {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-          form.style.display = 'none';
-          resultArea.style.display = 'block';
-          
-          shareUrlDiv.innerText = data.shareUrl;
-          
-          // Generate QR Code
-          QRCode.toCanvas(document.createElement('canvas'), data.shareUrl, {
-            width: 200,
-            margin: 2,
-            color: { dark: '#0F172A', light: '#FFFFFF' }
-          }, function (err, canvas) {
-            if (!err) {
-              document.getElementById('qrcode').appendChild(canvas);
-            }
-          });
-        } else {
-          alert('エラーが発生しました: ' + (data.error || '不明なエラー'));
-          submitBtn.style.display = 'block';
+        // Convert all files to base64
+        var filesData = [];
+        for (var i = 0; i < fileInput.files.length; i++) {
+          progressText.textContent = 'Reading file ' + (i + 1) + ' of ' + fileInput.files.length + '...';
+          progressFill.style.width = (10 + (i / fileInput.files.length) * 40) + '%';
+          var fileData = await readFileAsBase64(fileInput.files[i]);
+          filesData.push(fileData);
         }
+
+        progressText.textContent = 'Uploading...';
+        progressFill.style.width = '60%';
+
+        var payload = {
+          files: filesData,
+          expireMinutes: document.getElementById('expireSelect').value
+        };
+
+        var res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        progressFill.style.width = '90%';
+
+        if (!res.ok) {
+          var errData = await res.json().catch(function() { return { error: 'Server error (status ' + res.status + ')' }; });
+          throw new Error(errData.error || 'Upload failed');
+        }
+
+        var data = await res.json();
+
+        if (data.success) {
+          progressFill.style.width = '100%';
+          progressText.textContent = 'Done!';
+
+          setTimeout(function() {
+            uploadArea.style.display = 'none';
+            resultArea.style.display = 'block';
+            document.getElementById('shareUrl').textContent = data.shareUrl;
+
+            // Generate QR Code
+            QRCode.toCanvas(document.createElement('canvas'), data.shareUrl, {
+              width: 200,
+              margin: 2,
+              color: { dark: '#0F172A', light: '#FFFFFF' }
+            }, function(err, canvas) {
+              if (!err) {
+                document.getElementById('qrcode').appendChild(canvas);
+              }
+            });
+          }, 500);
+        } else {
+          throw new Error(data.error || 'Unknown error');
+        }
+
       } catch (err) {
-        alert('Upload failed. Error: ' + err.message);
-        submitBtn.style.display = 'block';
-      } finally {
-        spinner.style.display = 'none';
+        progressArea.style.display = 'none';
+        errorText.style.display = 'block';
+        errorText.textContent = 'Error: ' + err.message;
+        submitBtn.disabled = false;
       }
     });
   </script>

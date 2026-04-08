@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const os = require('os');
 const apiApp = require('./api/index');
 
 const app = express();
@@ -21,20 +22,47 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('=== Server running! ===');
-  console.log('Local:   http://localhost:' + PORT);
-
-  const { networkInterfaces } = require('os');
-  const nets = networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
+function getWifiIP() {
+  var nets = os.networkInterfaces();
+  var candidates = [];
+  for (var name of Object.keys(nets)) {
+    for (var net of nets[name]) {
       if (net.family === 'IPv4' && !net.internal) {
-        console.log('Network: http://' + net.address + ':' + PORT);
+        candidates.push({ name: name, address: net.address });
       }
     }
   }
+  // Prefer 192.168.x.x (typical home Wi-Fi)
+  var wifi = candidates.find(function(c) { return c.address.startsWith('192.168.'); });
+  if (wifi) return wifi.address;
+  // Then try 10.x.x.x
+  var ten = candidates.find(function(c) { return c.address.startsWith('10.'); });
+  if (ten) return ten.address;
+  // Fallback to first available
+  if (candidates.length > 0) return candidates[0].address;
+  return null;
+}
+
+app.listen(PORT, '0.0.0.0', function() {
+  var wifiIP = getWifiIP();
+
   console.log('');
-  console.log('Open the Network URL above on your iPad/phone.');
-  console.log('Press Ctrl+C to stop the server.');
+  console.log('==================================================');
+  console.log('  Server is running!');
+  console.log('==================================================');
+  console.log('');
+  console.log('  PC browser  : http://localhost:' + PORT);
+  if (wifiIP) {
+    console.log('  iPad / phone: http://' + wifiIP + ':' + PORT);
+  } else {
+    console.log('  [WARNING] Could not detect Wi-Fi IP.');
+    console.log('  Make sure your PC is connected to Wi-Fi.');
+  }
+  console.log('');
+  console.log('  * iPad and PC must be on the SAME Wi-Fi network.');
+  console.log('  * If iPad cannot connect, run start_app.bat');
+  console.log('    as Administrator (right-click > Run as admin).');
+  console.log('');
+  console.log('  Press Ctrl+C to stop the server.');
+  console.log('==================================================');
 });

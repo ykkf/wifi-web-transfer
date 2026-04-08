@@ -6,6 +6,7 @@ echo   Wi-Fi Web Transfer - Starting...
 echo ==================================================
 echo.
 
+REM Check Node.js
 node -v > nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Node.js is not installed.
@@ -14,6 +15,7 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
+REM Install packages if needed
 if not exist "node_modules" (
     echo Installing packages... Please wait...
     call npm install
@@ -23,6 +25,17 @@ if not exist "node_modules" (
         exit /b
     )
     echo Done!
+    echo.
+)
+
+REM Open firewall port 8080 for iPad/phone access
+echo Opening firewall port 8080...
+netsh advfirewall firewall delete rule name="WiFiTransfer" > nul 2>&1
+netsh advfirewall firewall add rule name="WiFiTransfer" dir=in action=allow protocol=tcp localport=8080 > nul 2>&1
+if %errorlevel% neq 0 (
+    echo [WARNING] Could not open firewall automatically.
+    echo If iPad cannot connect, right-click this file
+    echo and select "Run as administrator".
     echo.
 )
 

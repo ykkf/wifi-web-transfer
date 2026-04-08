@@ -164,10 +164,17 @@
     <p class="subtitle">Pick files and share instantly</p>
 
     <div id="uploadArea">
+      <div id="desktopConnectArea" style="display:none; background: rgba(79, 70, 229, 0.1); border: 1px solid rgba(79, 70, 229, 0.3); border-radius: 16px; padding: 1.5rem; text-align: center; margin-bottom: 2rem;">
+        <h3 style="color: #818CF8; margin-top:0;">📱 iPadやスマホから送るには？</h3>
+        <p style="font-size: 0.9rem; margin-bottom: 1rem;">iPadのカメラで以下のQRコードを読み取るか、ブラウザで直接URLを入力してください。</p>
+        <div id="desktopQrcode" style="background: white; padding: 10px; border-radius: 12px; display: inline-block; margin-bottom: 1rem;"></div>
+        <div class="url-box" id="desktopUrlBox" style="font-size: 1.1rem; letter-spacing: 1px;"></div>
+      </div>
+
       <div class="notice-box">
         <strong>⚠️ 容量制限について</strong><br>
         インターネット公開版 (Vercel) では、仕様により一度に送れる合計サイズは <strong>約4.5MBまで</strong> となります。<br>
-        ※ローカル起動 (`start_app.bat`) の場合は制限はありません（無制限）。
+        ※ローカル版 (デスクトップアプリ等) の場合は制限はありません（無制限）。
       </div>
 
       <div class="file-drop-area" id="dropArea">
@@ -365,8 +372,33 @@
       }
     }
     
-    // Load recent files on page load
+    async function fetchDesktopIp() {
+      // Show QR if we are running as desktop app or accessing via localhost
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        try {
+          var res = await fetch('/api/ip');
+          if (res.ok) {
+            var data = await res.json();
+            if (data.ip && data.ip !== 'localhost') {
+              var port = window.location.port || '8080';
+              var connectUrl = window.location.protocol + '//' + data.ip + ':' + port;
+              document.getElementById('desktopConnectArea').style.display = 'block';
+              document.getElementById('desktopUrlBox').innerHTML = '<a href="' + connectUrl + '" style="color: #60A5FA; text-decoration: none;">' + connectUrl + '</a>';
+              
+              QRCode.toCanvas(document.createElement('canvas'), connectUrl, {
+                width: 150, margin: 2, color: { dark: '#0F172A', light: '#FFFFFF' }
+              }, function(err, canvas) {
+                if (!err) document.getElementById('desktopQrcode').appendChild(canvas);
+              });
+            }
+          }
+        } catch (e) { /* silent */ }
+      }
+    }
+
+    // Load initial data
     fetchRecentSessions();
+    fetchDesktopIp();
   </script>
 </body>
 </html>

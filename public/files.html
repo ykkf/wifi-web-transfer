@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wi-Fi Web Transfer - ダウンロード</title>
+  <title>Wi-Fi Web Transfer</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -35,13 +35,14 @@
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
     .meta { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
-    
+
     .btn-zip {
       display: block; width: 100%; text-align: center;
       background: linear-gradient(135deg, #4F46E5, #6366F1); color: white;
       text-decoration: none; padding: 1rem; border-radius: 12px;
       font-weight: 600; font-size: 1.1rem; margin-bottom: 2rem;
       box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3); transition: transform 0.2s;
+      box-sizing: border-box;
     }
     .btn-zip:hover { transform: translateY(-2px); opacity: 0.9; }
 
@@ -53,7 +54,7 @@
     }
     .file-name { font-weight: 600; word-break: break-all; }
     .file-size { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
-    
+
     .btn-download {
       background: rgba(255,255,255,0.1); color: #60A5FA;
       text-decoration: none; padding: 0.5rem 1rem;
@@ -70,63 +71,74 @@
 <body>
 
   <div class="container">
-    <div id="loading">情報を取得中...</div>
+    <div id="loading">Loading...</div>
     <div id="errorMsg"></div>
 
     <div class="content-area" id="contentArea">
-      <h1>共有されたファイル</h1>
+      <h1 id="pageTitle"></h1>
       <div class="meta" id="metaInfo"></div>
-      
-      <a href="#" id="zipBtn" class="btn-zip">すべてダウンロード (ZIP)</a>
+
+      <a href="#" id="zipBtn" class="btn-zip">ZIP Download (All Files)</a>
 
       <ul class="file-list" id="fileList"></ul>
     </div>
   </div>
 
   <script>
-    const sessionId = window.location.pathname.split('/').pop();
+    var sessionId = window.location.pathname.split('/').pop();
 
     async function fetchMetadata() {
       try {
-        const res = await fetch(`/api/files/\${sessionId}`);
-        const data = await res.json();
-        
+        var res = await fetch('/api/files/' + sessionId);
+        var data = await res.json();
+
         if (!res.ok) {
-          throw new Error(data.error || '情報の取得に失敗しました');
+          throw new Error(data.error || 'Failed to load.');
         }
 
         document.getElementById('loading').style.display = 'none';
-        const contentArea = document.getElementById('contentArea');
-        contentArea.style.display = 'block';
+        document.getElementById('contentArea').style.display = 'block';
+        document.getElementById('pageTitle').textContent = 'Shared Files';
 
-        const expireDate = new Date(data.expiresAt).toLocaleString();
-        document.getElementById('metaInfo').innerText = `ファイルの数: \${data.files.length} 個 | 有効期限: \${expireDate}`;
+        var expireDate = new Date(data.expiresAt).toLocaleString();
+        document.getElementById('metaInfo').textContent = data.files.length + ' files | Expires: ' + expireDate;
 
-        document.getElementById('zipBtn').href = `/api/download/\${sessionId}/zip/all`;
+        document.getElementById('zipBtn').href = '/api/download/' + sessionId + '/zip/all';
         if (data.files.length === 1) {
-           document.getElementById('zipBtn').style.display = 'none'; // 1個の時はZIPボタンを隠す
+           document.getElementById('zipBtn').style.display = 'none';
         }
 
-        const list = document.getElementById('fileList');
-        data.files.forEach(f => {
-          const li = document.createElement('li');
+        var list = document.getElementById('fileList');
+        data.files.forEach(function(f) {
+          var li = document.createElement('li');
           li.className = 'file-item';
-          const sizeKb = (f.size / 1024).toFixed(1);
-          li.innerHTML = `
-            <div>
-              <div class="file-name">\${f.name}</div>
-              <div class="file-size">\${sizeKb} KB</div>
-            </div>
-            <a href="/api/download/\${sessionId}/\${f.index}" class="btn-download">保存</a>
-          `;
+          var sizeKb = (f.size / 1024).toFixed(1);
+
+          var infoDiv = document.createElement('div');
+          var nameDiv = document.createElement('div');
+          nameDiv.className = 'file-name';
+          nameDiv.textContent = f.name;
+          var sizeDiv = document.createElement('div');
+          sizeDiv.className = 'file-size';
+          sizeDiv.textContent = sizeKb + ' KB';
+          infoDiv.appendChild(nameDiv);
+          infoDiv.appendChild(sizeDiv);
+
+          var dlLink = document.createElement('a');
+          dlLink.href = '/api/download/' + sessionId + '/' + f.index;
+          dlLink.className = 'btn-download';
+          dlLink.textContent = 'Download';
+
+          li.appendChild(infoDiv);
+          li.appendChild(dlLink);
           list.appendChild(li);
         });
 
       } catch (err) {
         document.getElementById('loading').style.display = 'none';
-        const errEl = document.getElementById('errorMsg');
+        var errEl = document.getElementById('errorMsg');
         errEl.style.display = 'block';
-        errEl.innerText = err.message;
+        errEl.textContent = err.message;
       }
     }
 

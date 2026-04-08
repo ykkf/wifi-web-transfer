@@ -22,17 +22,19 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running locally!`);
-  console.log(`Access the app locally via: http://localhost:\${PORT}`);
-  
-  // Try mapping local IP to show user for local network access
+  console.log('=== Server running! ===');
+  console.log('Local:   http://localhost:' + PORT);
+
   const { networkInterfaces } = require('os');
   const nets = networkInterfaces();
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
       if (net.family === 'IPv4' && !net.internal) {
-        console.log(`Available on local network at: http://\${net.address}:\${PORT}`);
+        console.log('Network: http://' + net.address + ':' + PORT);
       }
     }
   }
+  console.log('');
+  console.log('Open the Network URL above on your iPad/phone.');
+  console.log('Press Ctrl+C to stop the server.');
 });

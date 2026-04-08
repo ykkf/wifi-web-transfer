@@ -31,7 +31,7 @@ router.post('/', upload.array('files'), (req, res) => {
     // Generate URL to share
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.headers.host;
-    const shareUrl = `\${protocol}://\${host}/files/\${sessionId}`;
+    const shareUrl = protocol + '://' + host + '/files/' + sessionId;
 
     res.json({ success: true, sessionId, shareUrl, expiresAt });
   } catch (err) {

@@ -31,8 +31,8 @@ router.get('/:id/:fileIndex', (req, res) => {
   }
 
   const file = session.files[fileIndex];
-  
-  res.setHeader('Content-disposition', `attachment; filename="\${encodeURIComponent(file.originalname)}"`);
+
+  res.setHeader('Content-disposition', 'attachment; filename="' + encodeURIComponent(file.originalname) + '"');
   res.setHeader('Content-type', file.mimetype);
   res.send(file.buffer);
 });
@@ -46,7 +46,7 @@ router.get('/:id/zip/all', (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="files.zip"');
 
   const archive = archiver('zip', { zlib: { level: 1 } });
-  
+
   archive.on('error', err => {
     res.status(500).send({ error: err.message });
   });

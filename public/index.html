@@ -230,7 +230,7 @@
           submitBtn.style.display = 'block';
         }
       } catch (err) {
-        alert('アップロード中にエラーが発生しました。ペイロード上限を超えている可能性があります。');
+        alert('Upload failed. Error: ' + err.message);
         submitBtn.style.display = 'block';
       } finally {
         spinner.style.display = 'none';

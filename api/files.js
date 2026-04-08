@@ -3,6 +3,26 @@ const memoryStore = require('./memoryStore');
 
 const router = express.Router();
 
+// Get all active sessions
+router.get('/', (req, res) => {
+  const activeSessions = [];
+  const now = Date.now();
+  for (const [id, session] of memoryStore.sessions.entries()) {
+    if (now > session.expiresAt) {
+      memoryStore.sessions.delete(id);
+    } else {
+      activeSessions.push({
+        sessionId: id,
+        fileCount: session.files.length,
+        expiresAt: session.expiresAt
+      });
+    }
+  }
+  // Sort by newest expiry first
+  activeSessions.sort((a, b) => b.expiresAt - a.expiresAt);
+  res.json({ sessions: activeSessions });
+});
+
 // Get metadata for a given session ID
 router.get('/:id', (req, res) => {
   const sessionId = req.params.id;

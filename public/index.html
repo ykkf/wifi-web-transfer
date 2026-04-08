@@ -116,6 +116,17 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
 
+    .notice-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #FBBF24;
+      padding: 1rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
     .progress-area {
       display: none;
       margin-bottom: 1rem;
@@ -153,35 +164,47 @@
     <p class="subtitle">Pick files and share instantly</p>
 
     <div id="uploadArea">
+      <div class="notice-box">
+        <strong>⚠️ 容量制限について</strong><br>
+        インターネット公開版 (Vercel) では、仕様により一度に送れる合計サイズは <strong>約4.5MBまで</strong> となります。<br>
+        ※ローカル起動 (`start_app.bat`) の場合は制限はありません（無制限）。
+      </div>
+
       <div class="file-drop-area" id="dropArea">
-        <div class="file-msg" id="fileMsg">Tap to select files</div>
+        <div class="file-msg" id="fileMsg">ここをタップしてファイルを選択</div>
         <input type="file" id="fileInput" multiple>
       </div>
 
       <select id="expireSelect">
-        <option value="10">Expires in: 10 min</option>
-        <option value="60" selected>Expires in: 60 min</option>
-        <option value="1440">Expires in: 24 hours</option>
+        <option value="10">有効期限: 10 分</option>
+        <option value="60" selected>有効期限: 60 分</option>
+        <option value="1440">有効期限: 24 時間</option>
       </select>
 
       <div class="progress-area" id="progressArea">
         <div class="progress-bar-bg">
           <div class="progress-bar-fill" id="progressFill"></div>
         </div>
-        <div class="progress-text" id="progressText">Preparing...</div>
+        <div class="progress-text" id="progressText">準備中...</div>
       </div>
 
-      <button id="submitBtn" disabled>Send Files</button>
+      <button id="submitBtn" disabled>ファイルを送信</button>
       <div class="error-text" id="errorText" style="display:none;"></div>
     </div>
 
     <div id="resultArea">
-      <p style="color: #4ADE80; font-weight: bold; font-size: 1.2rem;">Upload Complete!</p>
+      <p style="color: #4ADE80; font-weight: bold; font-size: 1.2rem;">アップロード完了！</p>
       <div id="qrcode"></div>
-      <p>Share this URL or scan QR code:</p>
+      <p>このURLを共有するか、QRコードをスキャンしてください：</p>
       <div class="url-box" id="shareUrl"></div>
-      <button style="margin-top: 1.5rem; background: #334155;" onclick="location.reload()">Send more files</button>
     </div>
+
+    <div id="recentArea" style="margin-top: 3rem; text-align: left; display: none;">
+      <h3 style="color:#A78BFA; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem; margin-bottom: 1rem;">📥 最近受信したファイル</h3>
+      <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1rem;">※同じWi-Fi内でアップロードされたファイルがここに表示されます。クリックで受け取れます。</p>
+      <div id="recentList" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+
   </div>
 
   <script>
@@ -197,11 +220,17 @@
 
     fileInput.addEventListener('change', function() {
       if (fileInput.files.length > 0) {
-        fileMsg.textContent = fileInput.files.length + ' file(s) selected';
+        var totalSize = 0;
+        for (var i = 0; i < fileInput.files.length; i++) {
+          totalSize += fileInput.files[i].size;
+        }
+        var sizeMb = (totalSize / (1024 * 1024)).toFixed(2);
+        
+        fileMsg.innerHTML = '<span style="color:#60A5FA;font-size:1.4rem;">' + fileInput.files.length + '</span> 個のファイル<br><span style="font-size:0.9rem;color:#94A3B8;">(合計: ' + sizeMb + ' MB)</span>';
         document.getElementById('dropArea').style.borderColor = '#60A5FA';
         submitBtn.disabled = false;
       } else {
-        fileMsg.textContent = 'Tap to select files';
+        fileMsg.textContent = 'ここをタップしてファイルを選択';
         document.getElementById('dropArea').style.borderColor = 'rgba(255,255,255,0.2)';
         submitBtn.disabled = true;
       }
@@ -298,6 +327,46 @@
         submitBtn.disabled = false;
       }
     });
+
+    async function fetchRecentSessions() {
+      try {
+        var res = await fetch('/api/files');
+        if (res.ok) {
+          var data = await res.json();
+          if (data.sessions && data.sessions.length > 0) {
+            var recentArea = document.getElementById('recentArea');
+            var recentList = document.getElementById('recentList');
+            recentArea.style.display = 'block';
+            recentList.innerHTML = '';
+            
+            data.sessions.forEach(function(s) {
+              var btn = document.createElement('a');
+              btn.href = '/files/' + s.sessionId;
+              btn.style.cssText = 'background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; color: white; text-decoration: none; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s;';
+              btn.onmouseover = function() { btn.style.background = 'rgba(255,255,255,0.1)'; };
+              btn.onmouseout = function() { btn.style.background = 'rgba(255,255,255,0.05)'; };
+              
+              var textDiv = document.createElement('div');
+              textDiv.innerHTML = '<span style="color:#60A5FA; font-weight:bold; font-size:1.1rem;">' + s.fileCount + ' 個のファイル</span><br><span style="font-size:0.85rem; color:#94A3B8;">有効期限: ' + new Date(s.expiresAt).toLocaleTimeString() + '</span>';
+              
+              var dlText = document.createElement('div');
+              dlText.innerHTML = '確認する ➔';
+              dlText.style.color = '#A78BFA';
+              dlText.style.fontWeight = 'bold';
+              
+              btn.appendChild(textDiv);
+              btn.appendChild(dlText);
+              recentList.appendChild(btn);
+            });
+          }
+        }
+      } catch (e) {
+        // fail silently
+      }
+    }
+    
+    // Load recent files on page load
+    fetchRecentSessions();
   </script>
 </body>
 </html>

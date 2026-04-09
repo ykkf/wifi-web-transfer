@@ -182,6 +182,8 @@
         <input type="file" id="fileInput" multiple>
       </div>
 
+      <div id="previewArea" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem; justify-content: center;"></div>
+
       <select id="expireSelect">
         <option value="10">有効期限: 10 分</option>
         <option value="60" selected>有効期限: 60 分</option>
@@ -204,6 +206,10 @@
       <div id="qrcode"></div>
       <p>このURLを共有するか、QRコードをスキャンしてください：</p>
       <div class="url-box" id="shareUrl"></div>
+      
+      <div style="margin-top: 2rem; text-align: center;">
+        <button style="background: rgba(255,255,255,0.05); color: #94A3B8; padding: 0.8rem 1.5rem; border-radius: 12px; font-weight: 600; border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s;" onclick="location.reload()">← トップに戻る</button>
+      </div>
     </div>
 
     <div id="recentArea" style="margin-top: 3rem; text-align: left; display: none;">
@@ -213,7 +219,6 @@
     </div>
 
   </div>
-
   <script>
     var fileInput = document.getElementById('fileInput');
     var fileMsg = document.getElementById('fileMsg');
@@ -224,12 +229,35 @@
     var errorText = document.getElementById('errorText');
     var uploadArea = document.getElementById('uploadArea');
     var resultArea = document.getElementById('resultArea');
+    var previewArea = document.getElementById('previewArea');
 
     fileInput.addEventListener('change', function() {
+      previewArea.innerHTML = ''; // clear previous previews
       if (fileInput.files.length > 0) {
         var totalSize = 0;
         for (var i = 0; i < fileInput.files.length; i++) {
           totalSize += fileInput.files[i].size;
+          
+          // Generate thumbnail if an image
+          var file = fileInput.files[i];
+          if (file.type.startsWith('image/')) {
+            var reader = new FileReader();
+            reader.onload = (function(f) {
+              return function(e) {
+                var img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.cssText = 'width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid rgba(255,255,255,0.1);';
+                previewArea.appendChild(img);
+              };
+            })(file);
+            reader.readAsDataURL(file);
+          } else {
+             // generic file icon
+             var dummy = document.createElement('div');
+             dummy.style.cssText = 'width: 60px; height: 60px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#94A3B8; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; padding:2px; box-sizing:border-box; text-align:center;';
+             dummy.textContent = file.name.split('.').pop().toUpperCase();
+             previewArea.appendChild(dummy);
+          }
         }
         var sizeMb = (totalSize / (1024 * 1024)).toFixed(2);
         
